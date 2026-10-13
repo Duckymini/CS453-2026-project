@@ -11,6 +11,7 @@
 #define _POSIX_C_SOURCE   200809L
 
 // External headers
+#include <stdalign.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,14 +24,24 @@ struct segment* segment_create(size_t size, size_t align) {
         return NULL;
     segment->size     = size;
     segment->nb_words = size / align;
-    // posix_memalign requires an alignment that is a multiple of sizeof(void*)
-    size_t alloc_align = align < sizeof(void*) ? sizeof(void*) : align;
-    if (posix_memalign(&(segment->copy_a), alloc_align, size) != 0)
-        goto fail_a;
-    if (posix_memalign(&(segment->copy_b), alloc_align, size) != 0)
-        goto fail_b;
-    memset(segment->copy_a, 0, size);
-    memset(segment->copy_b, 0, size);
+    if (align <= alignof(max_align_t)) {
+        // calloc is aligned enough, and zeroes large blocks lazily (pages
+        // untouched by the transactions are never actually allocated)
+        segment->copy_a = calloc(1, size);
+        if (!segment->copy_a)
+            goto fail_a;
+        segment->copy_b = calloc(1, size);
+        if (!segment->copy_b)
+            goto fail_b;
+    } else {
+        // posix_memalign requires an alignment that is a multiple of sizeof(void*)
+        if (posix_memalign(&(segment->copy_a), align, size) != 0)
+            goto fail_a;
+        if (posix_memalign(&(segment->copy_b), align, size) != 0)
+            goto fail_b;
+        memset(segment->copy_a, 0, size);
+        memset(segment->copy_b, 0, size);
+    }
     // All-zero bytes is a valid zero value for a lock-free atomic integer
     segment->controls = calloc(segment->nb_words, sizeof(_Atomic uint64_t));
     if (!segment->controls)
