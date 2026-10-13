@@ -81,8 +81,16 @@ shared_t tm_create(size_t size, size_t align) {
 /** Destroy (i.e. clean-up + free) a given shared memory region.
  * @param shared Shared memory region to destroy, with no running transaction
 **/
-void tm_destroy(shared_t unused(shared)) {
-    // TODO: tm_destroy(shared_t)
+void tm_destroy(shared_t shared) {
+    struct region* region = (struct region*) shared;
+    for (uint64_t i = 1; i < ADDR_MAX_SEGMENTS; i++){
+        if (region->segments[i]) {
+            segment_free(region->segments[i]);
+        }
+    }
+    pthread_mutex_destroy(&region->alloc_lock);
+    batcher_cleanup(&region->batcher);
+    free(region);
 }
 
 /** [thread-safe] Return the start address of the first allocated segment in the shared memory region.
