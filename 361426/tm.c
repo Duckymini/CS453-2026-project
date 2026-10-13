@@ -98,26 +98,23 @@ void tm_destroy(shared_t shared) {
  * @return Start address of the first allocated segment
 **/
 void* tm_start(shared_t unused(shared)) {
-    // TODO: tm_start(shared_t)
-    return NULL;
+    return addr_encode(1, 0);
 }
 
 /** [thread-safe] Return the size (in bytes) of the first allocated segment of the shared memory region.
  * @param shared Shared memory region to query
  * @return First allocated segment size
 **/
-size_t tm_size(shared_t unused(shared)) {
-    // TODO: tm_size(shared_t)
-    return 0;
+size_t tm_size(shared_t shared) {
+    return ((struct region*) shared)->size;
 }
 
 /** [thread-safe] Return the alignment (in bytes) of the memory accesses on the given shared memory region.
  * @param shared Shared memory region to query
  * @return Alignment used globally
 **/
-size_t tm_align(shared_t unused(shared)) {
-    // TODO: tm_align(shared_t)
-    return 0;
+size_t tm_align(shared_t shared) {
+    return ((struct region*) shared)->align;
 }
 
 /** [thread-safe] Begin a new transaction on the given shared memory region.
