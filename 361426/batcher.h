@@ -49,6 +49,8 @@ uint64_t batcher_get_epoch(struct batcher* batcher);
 void batcher_enter(struct batcher* batcher);
 
 /** Leave the batcher; the last thread of the batch ends the epoch and lets the next batch in.
- * @param batcher Batcher to leave
+ * @param batcher      Batcher to leave
+ * @param on_epoch_end Function called by the last thread of the batch, before the next batch starts
+ * @param arg          Argument passed to on_epoch_end
 **/
-void batcher_leave(struct batcher* batcher);
+void batcher_leave(struct batcher* batcher, void (*on_epoch_end)(void*), void* arg);

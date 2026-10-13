@@ -58,11 +58,14 @@ void batcher_enter(struct batcher* batcher) {
     pthread_mutex_unlock(&(batcher->mutex));
 }
 
-void batcher_leave(struct batcher* batcher) {
+void batcher_leave(struct batcher* batcher, void (*on_epoch_end)(void*), void* arg) {
     pthread_mutex_lock(&(batcher->mutex));
     batcher->remaining--;
     if (batcher->remaining == 0) {
-        // Last thread of the batch: end the epoch and let the blocked threads in
+        // Last thread of the batch: no transaction is running, and none can
+        // start before the broadcast below, so the epoch-end work is safe here
+        on_epoch_end(arg);
+        // End the epoch and let the blocked threads in
         batcher->counter++;
         batcher->remaining = batcher->blocked;
         batcher->blocked = 0;
