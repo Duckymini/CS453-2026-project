@@ -32,15 +32,31 @@ void batcher_cleanup(struct batcher* batcher) {
     pthread_mutex_destroy(&(batcher->mutex));
 }
 
-uint64_t batcher_get_epoch(struct batcher* unused(batcher)) {
-    // TODO: batcher_get_epoch
-    return 0;
+uint64_t batcher_get_epoch(struct batcher* batcher) {
+    return batcher->counter;
 }
 
-void batcher_enter(struct batcher* unused(batcher)) {
-    // TODO: batcher_enter
+void batcher_enter(struct batcher* batcher) {
+    pthread_mutex_lock(&(batcher->mutex));
+    if (batcher->remaining == 0) {
+        batcher->remaining = 1;
+    } else {
+        uint64_t epoch = batcher->counter;
+        batcher->blocked++;
+        while (batcher->counter == epoch)
+            pthread_cond_wait(&(batcher->cond), &(batcher->mutex));
+    }
+    pthread_mutex_unlock(&(batcher->mutex));
 }
 
-void batcher_leave(struct batcher* unused(batcher)) {
-    // TODO: batcher_leave
+void batcher_leave(struct batcher* batcher) {
+    pthread_mutex_lock(&(batcher->mutex));
+    batcher->remaining--;
+    if (batcher->remaining == 0) {
+        batcher->counter++;
+        batcher->remaining = batcher->blocked;
+        batcher->blocked = 0;
+        pthread_cond_broadcast(&(batcher->cond));
+    }
+    pthread_mutex_unlock(&(batcher->mutex));
 }
