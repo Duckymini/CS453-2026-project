@@ -48,9 +48,34 @@ struct region {
  * @param align Alignment (in bytes, must be a power of 2) that the shared memory region must support
  * @return Opaque shared memory region handle, 'invalid_shared' on failure
 **/
-shared_t tm_create(size_t unused(size), size_t unused(align)) {
-    // TODO: tm_create(size_t, size_t)
-    return invalid_shared;
+shared_t tm_create(size_t size, size_t align) {
+    struct region* region = calloc(1, sizeof(struct region));
+    if (!region) {
+        return invalid_shared;
+    }
+    region->size = size;
+    region->align = align;
+    if (!batcher_init(&region->batcher)){
+        free(region);
+        return invalid_shared;
+    }
+    if (pthread_mutex_init(&region->alloc_lock, NULL) != 0) {
+        batcher_cleanup(&region->batcher);
+        free(region);
+        return invalid_shared;
+    }
+    struct segment* first = segment_create(size, align);
+    if (!first) {
+        pthread_mutex_destroy(&region->alloc_lock);
+        batcher_cleanup(&region->batcher);
+        free(region);
+        return invalid_shared;
+    }
+    region->segments[1] = first;
+    region->next_segment = 2;
+    region->next_tx_id = 1;
+
+    return region;
 }
 
 /** Destroy (i.e. clean-up + free) a given shared memory region.
