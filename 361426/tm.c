@@ -32,6 +32,17 @@
 #include "macros.h"
 #include "segment.h"
 
+struct region {
+    size_t size;                                  // Size of the first segment (in bytes)
+    size_t align;                                 // Alignment and word size of the region
+    struct batcher batcher;                       // Groups the transactions into epochs
+    struct segment* segments[ADDR_MAX_SEGMENTS];  // Segment table, indexed by segment index (index 0 unused)
+    uint64_t next_segment;                        // Next never-used segment index, for tm_alloc
+    pthread_mutex_t alloc_lock;                   // Protects next_segment
+    _Atomic uint64_t next_tx_id;                  // Next transaction id (ids start at 1, 0 means "nobody")
+};
+
+
 /** Create (i.e. allocate + init) a new shared memory region, with one first non-free-able allocated segment of the requested size and alignment.
  * @param size  Size of the first shared segment of memory to allocate (in bytes), must be a positive multiple of the alignment
  * @param align Alignment (in bytes, must be a power of 2) that the shared memory region must support
