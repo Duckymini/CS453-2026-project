@@ -21,11 +21,16 @@
 #endif
 
 // External headers
+#include <pthread.h>
+#include <stdatomic.h>
+#include <stdlib.h>
 
 // Internal headers
 #include <tm.h>
-
+#include "address.h"
+#include "batcher.h"
 #include "macros.h"
+#include "segment.h"
 
 /** Create (i.e. allocate + init) a new shared memory region, with one first non-free-able allocated segment of the requested size and alignment.
  * @param size  Size of the first shared segment of memory to allocate (in bytes), must be a positive multiple of the alignment
